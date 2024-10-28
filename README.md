@@ -1,1 +1,1 @@
-Bot for popular clicker called cookie clicker using Selenium
+Bot for popular clicker game called cookie clicker using Selenium
