@@ -1,54 +1,27 @@
-import time
-
-from product import Product
 from products import Products
-from web_driver_handler import *
+from web_driver_handler import WebDriverHandler
 
-URL = "https://orteil.dashnet.org/cookieclicker/"
+URL: str = "https://orteil.dashnet.org/cookieclicker/"
 
-webDriverHandler = WebDriverHandler(URL)
-products = Products()
-cookie_count = 0
+driver = WebDriverHandler(URL)
 
-for product_item in webDriverHandler.get_buildings():
-    product = Product(
-        id=product_item["id"],
-        name=product_item["name"],
-        price=product_item["price"],
-        cps=product_item["cps"],
-        web_element=webDriverHandler.find_product(product_item["id"]),
-        is_avaiable=not product_item["locked"],
-    )
+products = Products(driver)
 
-    products.add_product(product)
-
-next_to_buy = products.best_to_buy()
-count = 0
-next_avaiable_product_index = 1
-cookie_count = webDriverHandler.get_cookie_count()
+cookie_count: int = 0
 
 while True:
-    if count % 100 == 0:
-        if webDriverHandler.get_is_avaiable(next_avaiable_product_index):
-            product = products.products_list[next_avaiable_product_index]
+    cookie_count = driver.get_cookie_count()
 
-            product.is_avaiable = True
-            next_to_buy = products.best_to_buy()
+    products.check_if_next_product_unlocked()
 
-            next_avaiable_product_index += 1
-        count = 0
+    price = products.buy_product(cookie_count)
+    cookie_count -= price
 
-        cookie_count = webDriverHandler.get_cookie_count()
-        print("cookie count:", cookie_count)
+    for _ in range(100):
+        driver.click_cookie()
 
-    webDriverHandler.cookie_element.click()
+    if not (upgrade := driver.get_current_upgrades()):
+        continue
 
-    if cookie_count >= next_to_buy.price:
-        next_to_buy.web_element.click()
-        next_to_buy.price = webDriverHandler.get_new_price_for_building(next_to_buy.id)
-
-        cookie_count -= next_to_buy.price
-
-        next_to_buy = products.best_to_buy()
-
-    count += 1
+    price = driver.buy_upgrade(upgrade["price"], cookie_count, upgrade["id"])
+    cookie_count -= price
